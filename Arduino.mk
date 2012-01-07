@@ -51,10 +51,13 @@
 # For example:
 #
 #       ARDUINO_DIR  = /Applications/arduino-0013
+#       USER_LIB_PATH = ~/Documents/Arduino/libraries
 #
 #       TARGET       = CLItest
 #       ARDUINO_LIBS = LiquidCrystal
+#       USER_LIBS = MyLib
 #
+
 #       BOARD_TAG    = uno
 #       ARDUINO_PORT = /dev/cu.usb*
 #
@@ -62,16 +65,19 @@
 #
 # Hopefully these will be self-explanatory but in case they're not:
 #
-#    ARDUINO_DIR  - Where the Arduino software has been unpacked
-#    TARGET       - The basename used for the final files. Canonically
-#                   this would match the .ino file, but it's not needed
-#                   here: you could always set it to xx if you wanted!
-#    ARDUINO_LIBS - A list of any libraries used by the sketch (we assume
-#                   these are in $(ARDUINO_DIR)/hardware/libraries
-#    ARDUINO_PORT - The port where the Arduino can be found (only needed
-#                   when uploading
-#    BOARD_TAG    - The ard-parse-boards tag for the board e.g. uno or mega
-#                   'make show_boards' shows a list
+#    ARDUINO_DIR   - Where the Arduino software has been unpacked
+#    USER_LIB_PATH - Where your libraries directory inside your sketch
+#                    folder is.
+#    TARGET        - The basename used for the final files. Canonically
+#                    this would match the .ino file, but it's not needed
+#                    here: you could always set it to xx if you wanted!
+#    ARDUINO_LIBS  - A list of any libraries used by the sketch (we assume
+#                    these are in $(ARDUINO_DIR)/hardware/libraries
+#    USER_LIBS     - A list of libraries from the sketch libraries folder.
+#    ARDUINO_PORT  - The port where the Arduino can be found (only needed
+#                    when uploading
+#    BOARD_TAG     - The ard-parse-boards tag for the board e.g. uno or mega
+#                    'make show_boards' shows a list
 #
 # You might also want to specify these, but normally they'll be read from the
 # boards.txt file i.e. implied by BOARD_TAG
@@ -193,6 +199,11 @@ ifndef VARIANT
 VARIANT = $(shell $(PARSE_BOARD) $(BOARD_TAG) build.variant)
 endif
 
+ifndef ARDUINO_VERSION
+ARDUINO_VERSION = 100
+endif
+
+
 # normal programming info
 ifndef AVRDUDE_ARD_PROGRAMMER
 AVRDUDE_ARD_PROGRAMMER = $(shell $(PARSE_BOARD) $(BOARD_TAG) upload.protocol)
@@ -287,14 +298,20 @@ ECHO    = echo
 
 # General arguments
 SYS_LIBS      = $(patsubst %,$(ARDUINO_LIB_PATH)/%,$(ARDUINO_LIBS))
+USR_LIBS      = $(patsubst %,$(USER_LIB_PATH)/%,$(USER_LIBS))
 SYS_INCLUDES  = $(patsubst %,-I%,$(SYS_LIBS))
+USER_INCLUDES = $(patsubst %,-I%,$(USR_LIBS))
 SYS_OBJS      = $(wildcard $(patsubst %,%/*.o,$(SYS_LIBS)))
 LIB_SRC       = $(wildcard $(patsubst %,%/*.cpp,$(SYS_LIBS)))
-LIB_OBJS      = $(patsubst $(ARDUINO_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(LIB_SRC))
+USR_OBJS      = $(wildcard $(patsubst %,%/*.o,$(USR_LIBS)))
+USR_SRC       = $(wildcard $(patsubst %,%/*.cpp,$(USR_LIBS)))
+
+LIB_OBJS      = $(patsubst $(ARDUINO_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(LIB_SRC)) $(patsubst $(USER_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(USR_SRC))
 
 CPPFLAGS      = -mmcu=$(MCU) -DF_CPU=$(F_CPU) \
+			-DARDUINO=$(ARDUINO_VERSION) \
 			-I. -I$(ARDUINO_CORE_PATH) -I$(ARDUINO_VARIANT_PATH)\
-			$(SYS_INCLUDES) -g -Os -w -Wall \
+			$(SYS_INCLUDES) $(USER_INCLUDES) -g -Os -w -Wall \
 			-ffunction-sections -fdata-sections
 CFLAGS        = -std=gnu99
 CXXFLAGS      = -fno-exceptions
@@ -318,7 +335,12 @@ ARD_PORT      = $(firstword $(wildcard $(ARDUINO_PORT)))
 # library sources
 $(OBJDIR)/libs/%.o: $(ARDUINO_LIB_PATH)/%.cpp
 	mkdir -p $(dir $@)
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	$(CXX) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+
+# user library sources
+$(OBJDIR)/libs/%.o: $(USER_LIB_PATH)/%.cpp
+	mkdir -p $(dir $@)
+	$(CXX) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
 # normal local sources
 # .o rules are for objects, .d for dependency tracking
