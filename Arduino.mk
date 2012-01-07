@@ -189,6 +189,10 @@ ifndef F_CPU
 F_CPU = $(shell $(PARSE_BOARD) $(BOARD_TAG) build.f_cpu)
 endif
 
+ifndef VARIANT
+VARIANT = $(shell $(PARSE_BOARD) $(BOARD_TAG) build.variant)
+endif
+
 # normal programming info
 ifndef AVRDUDE_ARD_PROGRAMMER
 AVRDUDE_ARD_PROGRAMMER = $(shell $(PARSE_BOARD) $(BOARD_TAG) upload.protocol)
@@ -250,6 +254,7 @@ CORE_OBJ_FILES  = $(CORE_C_SRCS:.c=.o) $(CORE_CPP_SRCS:.cpp=.o)
 CORE_OBJS       = $(patsubst $(ARDUINO_CORE_PATH)/%,  \
 			$(OBJDIR)/%,$(CORE_OBJ_FILES))
 endif
+ARDUINO_VARIANT_PATH = $(ARDUINO_CORE_PATH)/../../variants/$(VARIANT)
 endif
 
 # all the objects!
@@ -288,7 +293,7 @@ LIB_SRC       = $(wildcard $(patsubst %,%/*.cpp,$(SYS_LIBS)))
 LIB_OBJS      = $(patsubst $(ARDUINO_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(LIB_SRC))
 
 CPPFLAGS      = -mmcu=$(MCU) -DF_CPU=$(F_CPU) \
-			-I. -I$(ARDUINO_CORE_PATH) \
+			-I. -I$(ARDUINO_CORE_PATH) -I$(ARDUINO_VARIANT_PATH)\
 			$(SYS_INCLUDES) -g -Os -w -Wall \
 			-ffunction-sections -fdata-sections
 CFLAGS        = -std=gnu99
@@ -297,7 +302,7 @@ ASFLAGS       = -mmcu=$(MCU) -I. -x assembler-with-cpp
 LDFLAGS       = -mmcu=$(MCU) -lm -Wl,--gc-sections -Os
 
 # Rules for making a CPP file from the main sketch (.cpe)
-PDEHEADER     = \#include \"WProgram.h\"\n\# line 1
+PDEHEADER     = \#include \"Arduino.h\"\n\# line 1
 
 # Expand and pick the first port
 ARD_PORT      = $(firstword $(wildcard $(ARDUINO_PORT)))
