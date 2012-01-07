@@ -139,6 +139,9 @@
 # Some paths
 #
 
+# This must be the first this in makefile
+TOP := $(dir $(lastword $(MAKEFILE_LIST)))
+
 ifneq (ARDUINO_DIR,)
 
 ifndef AVR_TOOLS_PATH
@@ -161,6 +164,10 @@ endif
 ########################################################################
 # boards.txt parsing
 #
+ifndef ARD_PARSE_BOARDS
+ARD_PARSE_BOARDS = $(TOP)/ard-parse-boards
+endif
+
 ifndef BOARD_TAG
 BOARD_TAG   = uno
 endif
@@ -170,7 +177,7 @@ BOARDS_TXT  = $(ARDUINO_DIR)/hardware/arduino/boards.txt
 endif
 
 ifndef PARSE_BOARD
-PARSE_BOARD = ard-parse-boards --boards_txt=$(BOARDS_TXT)
+PARSE_BOARD = $(ARD_PARSE_BOARDS) --boards_txt=$(BOARDS_TXT)
 endif
 
 # processor stuff
