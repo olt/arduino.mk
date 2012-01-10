@@ -57,7 +57,6 @@
 #       ARDUINO_LIBS = LiquidCrystal
 #       USER_LIBS = MyLib
 #
-
 #       BOARD_TAG    = uno
 #       ARDUINO_PORT = /dev/cu.usb*
 #
